@@ -20,12 +20,13 @@ from node_bridge_testkit.node_adapter import DENIED_CAPABILITIES
 
 DEFAULT_INSTALL_DIR = ".node_c_avatar"
 DEFAULT_NODE_ID = "node-c"
-ALLOWED_TASK_TYPES = ["reply_exactly"]
+ALLOWED_TASK_TYPES = ["reply_exactly", "file_deliver"]
 CAPABILITIES = [
     "health",
     "heartbeat",
     "capabilities",
     "reply_exactly",
+    "sandbox_file_receive",
     "structured_result",
 ]
 
@@ -67,6 +68,7 @@ def build_config(node_id: str, install_dir: Path) -> dict[str, Any]:
             "formal_ack": False,
             "file_execution": False,
             "shell_execution": False,
+            "sandbox_file_write": True,
         },
     }
 

@@ -29,7 +29,7 @@ def main() -> int:
     completed: list[dict[str, object]] = []
 
     while time.monotonic() < deadline and len(completed) < args.max_tasks:
-        result = run_once(relay, node_id, token=args.token)
+        result = run_once(relay, node_id, token=args.token, sandbox_dir=root)
         if not result.get("ok"):
             print(json.dumps({"ok": False, "stage": "poll_or_submit", "result": result}, ensure_ascii=False, indent=2))
             return 1
@@ -41,6 +41,10 @@ def main() -> int:
                 "task_id": result.get("task_id"),
                 "marker": task_result.get("marker"),
                 "agent_message": task_result.get("agent_message"),
+                "filename": task_result.get("filename"),
+                "bytes": task_result.get("bytes"),
+                "sha256": task_result.get("sha256"),
+                "saved_to": task_result.get("saved_to"),
                 "execution": task_result.get("execution"),
             })
         else:

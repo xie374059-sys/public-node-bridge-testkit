@@ -193,10 +193,11 @@ curl -sS http://127.0.0.1:8765/tasks/TASK_ID
 
 ## Safe Task Types
 
-V0.1 supports only:
+V0.1 supports:
 
 ```text
 reply_exactly
+file_deliver
 ```
 
 Example:
@@ -228,8 +229,17 @@ The Node-C adapter can be run manually too:
 python3 -m node_bridge_testkit.node_adapter --node-id node-c
 ```
 
-It still supports only `reply_exactly` and still denies shell execution, file
-access, external sends, and private endpoint routing.
+It supports `reply_exactly` and sandboxed `file_deliver`. It still denies shell
+execution, file execution, arbitrary file access, external sends, and private
+endpoint routing.
+
+For `file_deliver`, Node-C writes only the provided small payload into:
+
+```text
+.node_c_avatar/inbox/<task_id>/
+```
+
+The result returns filename, byte count, SHA-256, and saved path.
 
 ## Node-C Avatar Installer
 
@@ -276,8 +286,15 @@ The relay can be started with token protection:
 NODE_BRIDGE_TOKEN=TOKEN python3 -m node_bridge_testkit.relay --host 0.0.0.0 --port 8765
 ```
 
-This still supports only `reply_exactly`. It does not prove real Codex IPC,
-formal ACK, external send, file execution, persistent service, or long-running
+The maintainer can also queue a file-channel preflight:
+
+```bash
+python3 send_node_c_file_probe.py --relay-url RELAY_URL --token TOKEN
+```
+
+The tester still runs the same client command. This proves only sandboxed file
+delivery with SHA-256 verification. It does not prove real Codex IPC, formal
+ACK, external send, file execution, persistent service, or long-running
 autonomy.
 
 ## Boundaries
@@ -286,7 +303,8 @@ This testkit intentionally does not:
 
 ```text
 run shell commands
-open local files
+open arbitrary local files
+execute received files
 send external messages
 install packages
 touch private data

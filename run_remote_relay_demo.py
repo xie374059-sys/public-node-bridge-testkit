@@ -7,6 +7,9 @@ import json
 import socket
 import threading
 import time
+import base64
+import hashlib
+import tempfile
 from typing import Any
 from urllib.request import Request, urlopen
 
@@ -18,6 +21,9 @@ TOKEN = "local-demo-token"
 NODE_ID = "node-c"
 MARKER = "NODEC-REMOTE-LOCAL-DEMO"
 EXPECTED = "STATUS=NODEC_REMOTE_LOCAL_DEMO_OK; MARKER=NODEC_REMOTE_LOCAL_DEMO; NEXT=REMOTE_REAL_RELAY"
+FILE_MARKER = "NODEC-FILE-LOCAL-DEMO"
+FILE_NAME = "nodec_file_local_demo.txt"
+FILE_CONTENT = "YUANJIE_NODEC_FILE_LOCAL_DEMO\nsafe=sandbox_only\nexecute=false\n"
 
 
 def free_port() -> int:
@@ -63,14 +69,42 @@ def main() -> int:
             },
         )
         task_id = str(created["task"]["task_id"])
-        handled = run_once(relay_url, NODE_ID, token=TOKEN)
-        if not handled.get("handled"):
-            raise AssertionError(f"remote client did not handle {task_id}")
+        with tempfile.TemporaryDirectory() as sandbox:
+            handled = run_once(relay_url, NODE_ID, token=TOKEN, sandbox_dir=sandbox)
+            if not handled.get("handled"):
+                raise AssertionError(f"remote client did not handle {task_id}")
 
-        task = http_json("GET", f"{relay_url}/tasks/{task_id}")["task"]
-        result = task.get("result") or {}
-        if result.get("agent_message") != EXPECTED:
-            raise AssertionError(f"expected {EXPECTED!r}, got {result.get('agent_message')!r}")
+            task = http_json("GET", f"{relay_url}/tasks/{task_id}")["task"]
+            result = task.get("result") or {}
+            if result.get("agent_message") != EXPECTED:
+                raise AssertionError(f"expected {EXPECTED!r}, got {result.get('agent_message')!r}")
+
+            file_bytes = FILE_CONTENT.encode("utf-8")
+            file_sha256 = hashlib.sha256(file_bytes).hexdigest()
+            file_task = http_json(
+                "POST",
+                f"{relay_url}/tasks",
+                {
+                    "target_node": NODE_ID,
+                    "task_type": "file_deliver",
+                    "payload": {
+                        "marker": FILE_MARKER,
+                        "filename": FILE_NAME,
+                        "content_b64": base64.b64encode(file_bytes).decode("ascii"),
+                        "sha256": file_sha256,
+                    },
+                },
+            )
+            file_task_id = str(file_task["task"]["task_id"])
+            file_handled = run_once(relay_url, NODE_ID, token=TOKEN, sandbox_dir=sandbox)
+            if not file_handled.get("handled"):
+                raise AssertionError(f"remote client did not handle {file_task_id}")
+            file_task_done = http_json("GET", f"{relay_url}/tasks/{file_task_id}")["task"]
+            file_result = file_task_done.get("result") or {}
+            if file_result.get("sha256") != file_sha256:
+                raise AssertionError("file sha256 mismatch")
+            if file_result.get("execution") != "local_adapter_file_deliver_sandbox_write":
+                raise AssertionError("file task did not use sandbox write")
 
         print(json.dumps({
             "ok": True,
@@ -81,6 +115,14 @@ def main() -> int:
                 "task_id": task_id,
                 "agent_message": result["agent_message"],
                 "execution": result["execution"],
+            },
+            "file_completed": {
+                "marker": FILE_MARKER,
+                "task_id": file_task_id,
+                "filename": file_result["filename"],
+                "bytes": file_result["bytes"],
+                "sha256": file_result["sha256"],
+                "execution": file_result["execution"],
             },
             "claim": "node_c_remote_relay_local_simulation_passed",
             "cannot_claim": [

@@ -10,15 +10,20 @@ V0.1 uses:
 localhost relay
 in-memory task queue
 mock node
-reply_exactly task only
+reply_exactly task
+sandboxed file_deliver task
 Python standard library only
 ```
+
+`file_deliver` writes only the task payload into `.node_c_avatar/inbox/<task_id>/`
+and returns SHA-256. It must not execute the file or read arbitrary local files.
 
 ## Not Included
 
 ```text
 No shell command execution
 No file execution
+No arbitrary local file read/write
 No browser control
 No account login
 No external message sending
@@ -57,6 +62,6 @@ It does not mean:
 external node connected
 formal ACK completed
 real Codex IPC validated
-file channel validated
+arbitrary file channel validated
 autonomous agent collaboration completed
 ```

@@ -85,6 +85,37 @@ task.status == completed
 task.result.agent_message == task.payload.text
 ```
 
+For `file_deliver`, the acceptance rule is:
+
+```text
+task.status == completed
+task.result.execution == local_adapter_file_deliver_sandbox_write
+task.result.marker == task.payload.marker
+task.result.filename == task.payload.filename
+task.result.sha256 == task.payload.sha256
+```
+
+`file_deliver` payload:
+
+```json
+{
+  "target_node": "node-c",
+  "task_type": "file_deliver",
+  "payload": {
+    "marker": "NODEC-FILE-001",
+    "filename": "nodec_file_preflight_001.txt",
+    "content_b64": "base64-encoded-small-file",
+    "sha256": "expected-sha256"
+  }
+}
+```
+
+Node-C writes only into its own sandbox:
+
+```text
+.node_c_avatar/inbox/<task_id>/
+```
+
 ## Node-C Local Adapter Preflight
 
 `run_node_c_preflight.py` uses the same relay and the same `reply_exactly`
@@ -123,7 +154,8 @@ denied_capabilities
 completed light tasks
 ```
 
-The installer preflight still uses only `reply_exactly` and remains local-only.
+The installer preflight supports `reply_exactly` and sandboxed `file_deliver`.
+It remains local-only until a relay URL and token are provided.
 
 ## Remote Relay Token Preflight
 
@@ -151,6 +183,13 @@ Acceptance rule remains:
 ```text
 task.status == completed
 task.result.agent_message == task.payload.text
+```
+
+For file-channel preflight:
+
+```text
+send_node_c_file_probe.py -> POST /tasks task_type=file_deliver -> wait GET /tasks/{task_id}
+run_node_c_remote_client.py -> GET /poll?node_id=node-c -> sandbox write -> POST /tasks/{task_id}/result
 ```
 
 Forbidden claims:
