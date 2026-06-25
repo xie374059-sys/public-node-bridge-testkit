@@ -31,6 +31,8 @@ DENIED_CAPABILITIES = [
 ]
 
 MAX_FILE_BYTES = 64 * 1024
+MAX_TASK_PACKAGE_BYTES = 64 * 1024
+ALLOWED_TASK_PACKAGE_ACTIONS = {"count_lines", "hash_text"}
 
 
 def safe_filename(name: str) -> str:
@@ -111,6 +113,58 @@ def execute_task(task: dict[str, Any], node_id: str, sandbox_dir: str | Path = "
                 "allowed_capability": "sandbox_file_write",
                 "denied_capabilities": DENIED_CAPABILITIES,
             }
+        except Exception as exc:
+            return {"status": "error", "error": str(exc)}
+    if task_type == "task_package":
+        try:
+            filename = safe_filename(str(payload.get("filename", "task_package.json")))
+            content_b64 = payload.get("content_b64")
+            expected_sha256 = str(payload.get("sha256", ""))
+            if not isinstance(content_b64, str):
+                return {"status": "error", "error": "missing payload.content_b64"}
+            raw = base64.b64decode(content_b64.encode("ascii"), validate=True)
+            if len(raw) > MAX_TASK_PACKAGE_BYTES:
+                return {"status": "error", "error": "task_package_too_large"}
+            actual_sha256 = hashlib.sha256(raw).hexdigest()
+            if expected_sha256 and actual_sha256 != expected_sha256:
+                return {"status": "error", "error": "sha256_mismatch", "sha256": actual_sha256}
+            package = json.loads(raw.decode("utf-8"))
+            if not isinstance(package, dict):
+                return {"status": "error", "error": "task_package_json_must_be_object"}
+            action = str(package.get("action", ""))
+            if action not in ALLOWED_TASK_PACKAGE_ACTIONS:
+                return {"status": "error", "error": f"task_package_action_not_allowed: {action}"}
+            text = package.get("input_text")
+            if not isinstance(text, str):
+                return {"status": "error", "error": "task_package_requires_input_text"}
+
+            root = Path(sandbox_dir or ".node_c_avatar").expanduser().resolve()
+            inbox = root / "inbox" / str(task.get("task_id", "task_unknown"))
+            inbox.mkdir(parents=True, exist_ok=True)
+            path = inbox / filename
+            path.write_bytes(raw)
+
+            result: dict[str, Any] = {
+                "status": "ok",
+                "node_id": node_id,
+                "marker": str(payload.get("marker") or package.get("marker") or ""),
+                "filename": filename,
+                "bytes": len(raw),
+                "sha256": actual_sha256,
+                "saved_to": str(path),
+                "action": action,
+                "execution": "local_adapter_task_package_execute_allowlist",
+                "safe_mode": True,
+                "allowed_capability": "allowlisted_task_package_execution",
+                "denied_capabilities": DENIED_CAPABILITIES,
+            }
+            if action == "count_lines":
+                result["line_count"] = len(text.splitlines())
+            elif action == "hash_text":
+                result["text_sha256"] = hashlib.sha256(text.encode("utf-8")).hexdigest()
+            return result
+        except json.JSONDecodeError as exc:
+            return {"status": "error", "error": f"invalid_task_package_json: {exc}"}
         except Exception as exc:
             return {"status": "error", "error": str(exc)}
     return {"status": "error", "error": f"unsupported task_type: {task_type}"}

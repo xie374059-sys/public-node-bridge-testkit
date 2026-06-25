@@ -116,6 +116,9 @@ def main() -> int:
                 "bytes": task_result.get("bytes"),
                 "sha256": task_result.get("sha256"),
                 "saved_to": task_result.get("saved_to"),
+                "action": task_result.get("action"),
+                "line_count": task_result.get("line_count"),
+                "text_sha256": task_result.get("text_sha256"),
                 "execution": task_result.get("execution"),
             })
         else:

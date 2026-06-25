@@ -145,6 +145,22 @@ py connect_node.py --relay-url RELAY_URL --token TOKEN
 `connect_node.py` installs the local Node-C avatar if needed, reports health,
 polls the relay, completes one queued safe task, and prints one JSON result.
 
+Run the local task-package preflight:
+
+```bash
+python3 run_node_c_task_package_preflight.py
+```
+
+On Windows:
+
+```powershell
+py run_node_c_task_package_preflight.py
+```
+
+This only executes allowlisted package actions on package-contained text. It
+does not run shell commands, execute local files, read private files, or send
+messages.
+
 Please include:
 
 ```text
@@ -201,6 +217,7 @@ V0.1 supports:
 ```text
 reply_exactly
 file_deliver
+task_package
 ```
 
 Example:

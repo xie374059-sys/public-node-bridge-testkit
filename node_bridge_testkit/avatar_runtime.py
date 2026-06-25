@@ -20,13 +20,14 @@ from node_bridge_testkit.node_adapter import DENIED_CAPABILITIES
 
 DEFAULT_INSTALL_DIR = ".node_c_avatar"
 DEFAULT_NODE_ID = "node-c"
-ALLOWED_TASK_TYPES = ["reply_exactly", "file_deliver"]
+ALLOWED_TASK_TYPES = ["reply_exactly", "file_deliver", "task_package"]
 CAPABILITIES = [
     "health",
     "heartbeat",
     "capabilities",
     "reply_exactly",
     "sandbox_file_receive",
+    "allowlisted_task_package_execution",
     "structured_result",
 ]
 
@@ -69,6 +70,7 @@ def build_config(node_id: str, install_dir: Path) -> dict[str, Any]:
             "file_execution": False,
             "shell_execution": False,
             "sandbox_file_write": True,
+            "task_package_execution": "allowlist_only",
         },
     }
 
