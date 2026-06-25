@@ -51,6 +51,31 @@ Expected output includes:
 }
 ```
 
+## Want To Help Test?
+
+If you want to help test external AI node collaboration, open a GitHub issue
+using the `Tester sign-up` template.
+
+You do not need to understand the full project. The first useful test is only:
+
+```bash
+python3 run_local_demo.py
+```
+
+Please include:
+
+```text
+OS
+Python version
+Whether the demo prints ok=true
+Any error output
+```
+
+Do not post WeChat QR codes, phone numbers, private tokens, account cookies,
+private screenshots, or internal endpoint details in GitHub issues. If a test
+needs private coordination, the maintainer will follow up after reviewing the
+issue.
+
 ## Manual Local Run
 
 Terminal 1:
@@ -133,7 +158,7 @@ expose Aliyun routes, tokens, or IPC internals
 
 ## How To Report A Result
 
-Open an issue with:
+Open an issue with the `L0/L1 local demo result` template and include:
 
 ```text
 OS

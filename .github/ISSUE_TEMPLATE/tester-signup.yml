@@ -1,0 +1,54 @@
+name: Tester sign-up
+description: Volunteer to test the public node bridge testkit.
+title: "[Tester] "
+labels: ["tester"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for offering to test the public node bridge testkit.
+
+        Do not post WeChat QR codes, phone numbers, private tokens, account cookies,
+        private screenshots, or internal endpoint details in this public issue.
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "macOS 15 / Windows 11 / Ubuntu 24.04"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "python3 --version"
+    validations:
+      required: false
+  - type: dropdown
+    id: can_run_terminal
+    attributes:
+      label: Can you run a terminal command?
+      options:
+        - "yes"
+        - "no"
+        - "not sure"
+    validations:
+      required: true
+  - type: dropdown
+    id: test_level
+    attributes:
+      label: Which test can you help with?
+      options:
+        - "L0/L1 local demo only"
+        - "Read README and report confusing parts"
+        - "Try to adapt it to another agent later"
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Share public, non-sensitive context only.
+      placeholder: "I can test on macOS and run python3 run_local_demo.py."
+    validations:
+      required: false

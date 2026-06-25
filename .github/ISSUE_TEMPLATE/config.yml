@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Public testkit README
+    url: https://github.com/xie374059-sys/public-node-bridge-testkit#readme
+    about: Read the local demo instructions before opening an issue.
