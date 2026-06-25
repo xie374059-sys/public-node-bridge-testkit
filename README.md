@@ -239,6 +239,15 @@ py run_node_c_codex_ipc_artifact_probe.py
 This lists matching named-pipe names and shallow Codex/OpenAI directory entries.
 It does not read file contents or connect to pipes.
 
+If `codex-ipc` exists, test whether it can be opened without sending payload:
+
+```powershell
+py run_node_c_codex_pipe_open_probe.py
+```
+
+This opens and immediately closes `\\.\pipe\codex-ipc`. It sends no data and
+does not claim the IPC protocol is usable.
+
 Please include:
 
 ```text
