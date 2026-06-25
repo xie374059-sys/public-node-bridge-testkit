@@ -182,16 +182,23 @@ def maybe_answer_discovery(k: Kernel32, handle: object, frame: dict[str, Any]) -
     return True
 
 
-def read_response_for(k: Kernel32, handle: object, request_id_value: str, timeout: float) -> tuple[dict[str, Any], int]:
+def read_response_for(
+    k: Kernel32,
+    handle: object,
+    request_id_value: str,
+    timeout: float,
+) -> tuple[dict[str, Any], int, list[dict[str, Any]]]:
     deadline = time.monotonic() + timeout
     discovery_replies = 0
+    side_frames: list[dict[str, Any]] = []
     while time.monotonic() < deadline:
         frame = read_frame(k, handle, max(0.1, deadline - time.monotonic()))
         if maybe_answer_discovery(k, handle, frame):
             discovery_replies += 1
             continue
         if frame.get("type") == "response" and frame.get("requestId") == request_id_value:
-            return frame, discovery_replies
+            return frame, discovery_replies, side_frames
+        side_frames.append(frame)
     raise TimeoutError(f"Timed out waiting for response {request_id_value}")
 
 
@@ -224,6 +231,19 @@ def exact_expected_seen(frame: dict[str, Any], conversation_id: str, expected: s
 def bump_method_count(counts: dict[str, int], frame: dict[str, Any]) -> None:
     method = str(frame.get("method") or frame.get("type") or "unknown")
     counts[method] = counts.get(method, 0) + 1
+
+
+def inspect_observed_frame(
+    frame: dict[str, Any],
+    conversation_id: str,
+    expected: str,
+    methods: dict[str, int],
+) -> tuple[bool, bool, bool]:
+    bump_method_count(methods, frame)
+    expected_seen = any(text.strip() == expected for text in iter_strings(frame))
+    conversation_seen = frame.get("type") == "broadcast" and frame_belongs_to_conversation(frame, conversation_id)
+    exact_seen = exact_expected_seen(frame, conversation_id, expected)
+    return expected_seen, conversation_seen, exact_seen
 
 
 def scrub_start_response(response: dict[str, Any]) -> dict[str, Any]:
@@ -292,8 +312,10 @@ def main() -> int:
             "method": "initialize",
             "params": {"clientType": "yuanjie-node-c-start-turn-probe"},
         })
-        init_response, replies = read_response_for(k, handle, init_id, args.read_timeout)
+        buffered_frames: list[dict[str, Any]] = []
+        init_response, replies, side_frames = read_response_for(k, handle, init_id, args.read_timeout)
         discovery_replies += replies
+        buffered_frames.extend(side_frames)
         init_ok = init_response.get("resultType") == "success"
         client_id = ""
         if isinstance(init_response.get("result"), dict):
@@ -323,8 +345,9 @@ def main() -> int:
             "timeoutMs": int(args.read_timeout * 1000),
         }
         write_frame(k, handle, start_message)
-        start_response, replies = read_response_for(k, handle, start_id, args.read_timeout)
+        start_response, replies, side_frames = read_response_for(k, handle, start_id, args.read_timeout)
         discovery_replies += replies
+        buffered_frames.extend(side_frames)
         start_response_scrubbed = scrub_start_response(start_response)
         task_sent = start_response.get("type") == "response" and start_response.get("resultType") == "success"
 
@@ -332,25 +355,34 @@ def main() -> int:
         expected_seen_anywhere = False
         conversation_broadcast_seen = False
         observed_frame_count = 0
+        live_frame_count = 0
         observed_methods: dict[str, int] = {}
+        for frame in buffered_frames:
+            observed_frame_count += 1
+            seen_marker, seen_conversation, seen_exact = inspect_observed_frame(
+                frame, args.conversation_id, expected, observed_methods
+            )
+            expected_seen_anywhere = expected_seen_anywhere or seen_marker
+            conversation_broadcast_seen = conversation_broadcast_seen or seen_conversation
+            observed_exact = observed_exact or seen_exact
+
         deadline = time.monotonic() + args.timeout
-        while task_sent and time.monotonic() < deadline:
+        while task_sent and not observed_exact and time.monotonic() < deadline:
             try:
                 frame = read_frame(k, handle, max(0.1, min(1.0, deadline - time.monotonic())))
             except TimeoutError:
                 continue
             observed_frame_count += 1
-            bump_method_count(observed_methods, frame)
+            live_frame_count += 1
             if maybe_answer_discovery(k, handle, frame):
                 discovery_replies += 1
                 continue
-            if any(text.strip() == expected for text in iter_strings(frame)):
-                expected_seen_anywhere = True
-            if frame.get("type") == "broadcast" and frame_belongs_to_conversation(frame, args.conversation_id):
-                conversation_broadcast_seen = True
-            if exact_expected_seen(frame, args.conversation_id, expected):
-                observed_exact = True
-                break
+            seen_marker, seen_conversation, seen_exact = inspect_observed_frame(
+                frame, args.conversation_id, expected, observed_methods
+            )
+            expected_seen_anywhere = expected_seen_anywhere or seen_marker
+            conversation_broadcast_seen = conversation_broadcast_seen or seen_conversation
+            observed_exact = observed_exact or seen_exact
 
         ok = bool(task_sent and observed_exact)
         print(json.dumps({
@@ -367,7 +399,9 @@ def main() -> int:
             "agent_message": expected if observed_exact else None,
             "diagnostics": {
                 "observe_timeout_seconds": args.timeout,
-                "frames_observed_after_start": observed_frame_count,
+                "frames_observed_total_after_start_request": observed_frame_count,
+                "buffered_frames_seen_before_start_response": len(buffered_frames),
+                "live_frames_seen_after_start_response": live_frame_count,
                 "methods_observed_after_start": observed_methods,
                 "conversation_broadcast_seen": conversation_broadcast_seen,
                 "expected_marker_seen_anywhere": expected_seen_anywhere,
