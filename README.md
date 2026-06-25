@@ -248,6 +248,25 @@ py run_node_c_codex_pipe_open_probe.py
 This opens and immediately closes `\\.\pipe\codex-ipc`. It sends no data and
 does not claim the IPC protocol is usable.
 
+If the pipe can be opened, test the Codex IPC router framing and initialize
+handshake:
+
+```powershell
+py run_node_c_codex_ipc_router_probe.py
+```
+
+This writes one framed `initialize` request to `\\.\pipe\codex-ipc` and reads
+the router response. It also sends one empty-params dry `thread-follower-start-turn`
+request to observe routing/error behavior. It does not send a real prompt, use
+the input box, read a conversation, or claim that `thread-follower-start-turn`
+is usable for task delivery.
+
+For initialize-only mode:
+
+```powershell
+py run_node_c_codex_ipc_router_probe.py --skip-dry-thread-follower
+```
+
 Please include:
 
 ```text

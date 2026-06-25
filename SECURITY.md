@@ -38,6 +38,12 @@ No input-box automation
 path, and optional localhost port hints for deciding whether a future IPC
 adapter is possible.
 
+`run_node_c_codex_ipc_router_probe.py` is a protocol probe, not a task sender.
+It can open `\\.\pipe\codex-ipc`, send one framed `initialize` request, and
+optionally send an empty-params dry `thread-follower-start-turn` request only
+to observe routing/error behavior. It must not use the input box, read private
+conversation content, execute files, or claim formal ACK/task delivery.
+
 ## Reporting Security Issues
 
 Open a GitHub issue only for public testkit concerns.
