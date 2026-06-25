@@ -297,6 +297,43 @@ delivery with SHA-256 verification. It does not prove real Codex IPC, formal
 ACK, external send, file execution, persistent service, or long-running
 autonomy.
 
+## Codex CLI Local Probe
+
+After remote relay and sandbox file-channel tests pass, a tester can check
+whether their machine has a callable Codex CLI:
+
+```bash
+python3 run_node_c_codex_cli_probe.py
+```
+
+On Windows:
+
+```powershell
+py run_node_c_codex_cli_probe.py
+```
+
+If detection passes and the tester agrees to run a tiny model call:
+
+```bash
+python3 run_node_c_codex_cli_probe.py --execute
+```
+
+On Windows:
+
+```powershell
+py run_node_c_codex_cli_probe.py --execute
+```
+
+Expected exact reply:
+
+```text
+NODEC_CODEX_CLI_OK_001
+```
+
+This proves only local Codex CLI availability and one exact tiny reply. It does
+not prove Codex Desktop IPC, frontstage session injection, formal ACK, external
+send, file execution, persistent service, or long-running autonomy.
+
 ## Boundaries
 
 This testkit intentionally does not:
