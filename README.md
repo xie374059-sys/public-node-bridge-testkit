@@ -196,6 +196,16 @@ Run the local handshake-card parser preflight:
 python3 run_agent_handshake_card_preflight.py
 ```
 
+On Windows, after opening Codex Desktop, run the read-only desktop-visible
+preflight:
+
+```powershell
+py run_node_c_desktop_visible_preflight.py
+```
+
+This only checks whether a visible window title matches `Codex`. It does not
+click, type, inject a task, or read a conversation.
+
 Please include:
 
 ```text
