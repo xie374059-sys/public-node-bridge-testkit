@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -124,15 +125,39 @@ class RelayHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _token(self) -> str:
+        return str(getattr(self.server, "token", "") or "")
+
+    def _authorized(self) -> bool:
+        token = self._token()
+        if not token:
+            return True
+        supplied = self.headers.get("X-Node-Bridge-Token", "")
+        return supplied == token
+
+    def _require_auth(self) -> bool:
+        if self._authorized():
+            return True
+        self._write_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": "forbidden"})
+        return False
+
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path == "/health":
-            self._write_json(HTTPStatus.OK, {"ok": True, "service": "node-bridge-testkit-relay"})
+            self._write_json(HTTPStatus.OK, {
+                "ok": True,
+                "service": "node-bridge-testkit-relay",
+                "auth_required": bool(self._token()),
+            })
             return
         if parsed.path == "/stats":
+            if not self._require_auth():
+                return
             self._write_json(HTTPStatus.OK, {"ok": True, "stats": self.state.stats()})
             return
         if parsed.path == "/poll":
+            if not self._require_auth():
+                return
             node_id = parse_qs(parsed.query).get("node_id", [""])[0]
             if not node_id:
                 self._write_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": "missing node_id"})
@@ -140,6 +165,8 @@ class RelayHandler(BaseHTTPRequestHandler):
             self._write_json(HTTPStatus.OK, response_from_task(self.state.poll(node_id)))
             return
         if parsed.path.startswith("/tasks/"):
+            if not self._require_auth():
+                return
             task_id = parsed.path.rsplit("/", 1)[-1]
             task = self.state.get(task_id)
             if task is None:
@@ -151,6 +178,8 @@ class RelayHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+        if not self._require_auth():
+            return
         try:
             body = self._read_json()
             if parsed.path == "/tasks":
@@ -180,9 +209,10 @@ class RelayHandler(BaseHTTPRequestHandler):
             self._write_json(HTTPStatus.FORBIDDEN, {"ok": False, "error": str(exc)})
 
 
-def make_server(host: str, port: int, quiet: bool = False) -> ThreadingHTTPServer:
+def make_server(host: str, port: int, quiet: bool = False, token: str = "") -> ThreadingHTTPServer:
     server = ThreadingHTTPServer((host, port), RelayHandler)
     server.quiet = quiet  # type: ignore[attr-defined]
+    server.token = token  # type: ignore[attr-defined]
     return server
 
 
@@ -190,11 +220,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run the local node bridge relay.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--token", default=os.environ.get("NODE_BRIDGE_TOKEN", ""))
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
 
-    server = make_server(args.host, args.port, quiet=args.quiet)
+    server = make_server(args.host, args.port, quiet=args.quiet, token=args.token)
     print(f"relay_listening=http://{args.host}:{args.port}")
+    print(f"auth_required={str(bool(args.token)).lower()}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

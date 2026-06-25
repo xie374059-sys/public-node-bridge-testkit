@@ -125,6 +125,45 @@ completed light tasks
 
 The installer preflight still uses only `reply_exactly` and remains local-only.
 
+## Remote Relay Token Preflight
+
+When a relay is started with `NODE_BRIDGE_TOKEN` or `--token`, task endpoints
+require:
+
+```http
+X-Node-Bridge-Token: <token>
+```
+
+Maintainer flow:
+
+```text
+send_node_c_remote_probe.py -> POST /tasks -> wait GET /tasks/{task_id}
+```
+
+Node-C flow:
+
+```text
+run_node_c_remote_client.py -> GET /poll?node_id=node-c -> POST /tasks/{task_id}/result
+```
+
+Acceptance rule remains:
+
+```text
+task.status == completed
+task.result.agent_message == task.payload.text
+```
+
+Forbidden claims:
+
+```text
+formal ACK
+real Codex Desktop IPC
+external send
+file execution
+persistent service
+long-running autonomy
+```
+
 ## Forbidden In V0.1
 
 ```text

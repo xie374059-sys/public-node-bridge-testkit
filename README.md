@@ -97,6 +97,15 @@ Expected output from the run step includes:
 }
 ```
 
+Run the remote relay simulation locally:
+
+```bash
+python3 run_remote_relay_demo.py
+```
+
+This proves token-protected remote relay semantics on localhost before using a
+real public relay.
+
 ## Want To Help Test?
 
 If you want to help test external AI node collaboration, open a GitHub issue
@@ -119,6 +128,18 @@ The third useful test is:
 ```bash
 python3 install_node_c_avatar.py
 python3 run_node_c_avatar.py
+```
+
+The fourth useful test, when the maintainer provides a relay URL and token, is:
+
+```bash
+python3 run_node_c_remote_client.py --relay-url RELAY_URL --token TOKEN
+```
+
+On Windows:
+
+```powershell
+py run_node_c_remote_client.py --relay-url RELAY_URL --token TOKEN
 ```
 
 Please include:
@@ -233,6 +254,32 @@ structured light-task results
 It is not a persistent background service yet. It is a user-like installer
 preflight for the next stage.
 
+## Remote Relay Preflight
+
+The remote preflight uses two scripts:
+
+Maintainer side:
+
+```bash
+python3 send_node_c_remote_probe.py --relay-url RELAY_URL --token TOKEN
+```
+
+Tester side:
+
+```bash
+python3 run_node_c_remote_client.py --relay-url RELAY_URL --token TOKEN
+```
+
+The relay can be started with token protection:
+
+```bash
+NODE_BRIDGE_TOKEN=TOKEN python3 -m node_bridge_testkit.relay --host 0.0.0.0 --port 8765
+```
+
+This still supports only `reply_exactly`. It does not prove real Codex IPC,
+formal ACK, external send, file execution, persistent service, or long-running
+autonomy.
+
 ## Boundaries
 
 This testkit intentionally does not:
@@ -267,7 +314,7 @@ Do not include private tokens, screenshots with private data, or credentials.
 V0.1 local relay + mock node + L0/L1 demo
 V0.2 Node-C local adapter preflight
 V0.3 Node-C avatar installer preflight
-V0.4 public relay token preflight
+V0.4 remote relay token preflight
 V0.5 real agent adapter interface
 V0.6 download-only file channel preflight
 ```

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 from typing import Any
 from urllib.error import HTTPError
@@ -26,9 +27,11 @@ DENIED_CAPABILITIES = [
 ]
 
 
-def http_json(method: str, url: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+def http_json(method: str, url: str, body: dict[str, Any] | None = None, token: str = "") -> dict[str, Any]:
     data = None
     headers = {"accept": "application/json"}
+    if token:
+        headers["X-Node-Bridge-Token"] = token
     if body is not None:
         data = json.dumps(body, ensure_ascii=False).encode("utf-8")
         headers["content-type"] = "application/json"
@@ -63,9 +66,9 @@ def execute_task(task: dict[str, Any], node_id: str) -> dict[str, Any]:
     return {"status": "error", "error": f"unsupported task_type: {task_type}"}
 
 
-def run_once(relay_url: str, node_id: str) -> dict[str, Any]:
+def run_once(relay_url: str, node_id: str, token: str = "") -> dict[str, Any]:
     poll_url = f"{relay_url.rstrip('/')}/poll?{urlencode({'node_id': node_id})}"
-    polled = http_json("GET", poll_url)
+    polled = http_json("GET", poll_url, token=token)
     task = polled.get("task")
     if not task:
         return {"ok": True, "handled": False, "node_id": node_id}
@@ -73,7 +76,7 @@ def run_once(relay_url: str, node_id: str) -> dict[str, Any]:
     result = execute_task(task, node_id)
     task_id = task["task_id"]
     result_url = f"{relay_url.rstrip('/')}/tasks/{task_id}/result"
-    posted = http_json("POST", result_url, {"node_id": node_id, "result": result})
+    posted = http_json("POST", result_url, {"node_id": node_id, "result": result}, token=token)
     return {"ok": bool(posted.get("ok")), "handled": True, "task_id": task_id, "posted": posted}
 
 
@@ -81,6 +84,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run a safe local node adapter.")
     parser.add_argument("--relay", default="http://127.0.0.1:8765")
     parser.add_argument("--node-id", default="node-c")
+    parser.add_argument("--token", default=os.environ.get("NODE_BRIDGE_TOKEN", ""))
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--interval", type=float, default=1.0)
     parser.add_argument("--max-iterations", type=int, default=0)
@@ -88,7 +92,7 @@ def main() -> int:
 
     iterations = 0
     while True:
-        result = run_once(args.relay, args.node_id)
+        result = run_once(args.relay, args.node_id, token=args.token)
         print(json.dumps(result, ensure_ascii=False))
         iterations += 1
         if args.once:

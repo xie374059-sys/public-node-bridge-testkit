@@ -16,6 +16,13 @@
   result output.
 - Added CI coverage for the installer preflight.
 
+## v0.4.0-dev
+
+- Added token-protected relay mode via `NODE_BRIDGE_TOKEN` or `--token`.
+- Added `send_node_c_remote_probe.py` for the maintainer side.
+- Added `run_node_c_remote_client.py` for the tester side.
+- Added `run_remote_relay_demo.py` to validate remote relay semantics locally.
+
 ## v0.1.0-local-proof
 
 First public local proof for `public-node-bridge-testkit`.

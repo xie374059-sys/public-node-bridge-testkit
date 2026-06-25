@@ -51,12 +51,12 @@ no external send
 no formal ACK
 ```
 
-## V0.4 Public Relay Preflight
+## V0.4 Remote Relay Token Preflight
 
 Goal:
 
 ```text
-Optional public relay with test token.
+Optional remote relay with test token.
 ```
 
 Rules:
