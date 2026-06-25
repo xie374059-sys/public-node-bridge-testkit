@@ -50,6 +50,11 @@ broadcasts, but it must output only scrubbed metadata: `conversationId`,
 `hostId`, change type, and revision. It must not print turns, messages,
 screenshots, files, or conversation bodies.
 
+`run_node_c_codex_ipc_start_turn_probe.py` sends one fixed tiny prompt through
+Codex Desktop IPC to an explicitly supplied `conversationId`. It claims success
+only if the assistant reply exactly matches the expected marker. It must not
+use the input box, execute files, send external messages, or claim formal ACK.
+
 ## Reporting Security Issues
 
 Open a GitHub issue only for public testkit concerns.

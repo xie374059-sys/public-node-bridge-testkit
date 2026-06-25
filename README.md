@@ -280,6 +280,17 @@ This listens briefly for Codex IPC broadcasts and prints only scrubbed thread
 metadata such as `conversationId`, `hostId`, change type, and revision. It must
 not print turns, messages, screenshots, files, or any conversation body.
 
+If a `conversationId` is observed, a maintainer may ask for one tiny IPC
+start-turn probe:
+
+```powershell
+py run_node_c_codex_ipc_start_turn_probe.py --conversation-id CONVERSATION_ID
+```
+
+This sends only `Reply exactly: NODEC_IPC_OK_001` through Codex Desktop IPC and
+claims success only if the matching assistant reply is observed. It does not
+use the input box or execute files.
+
 Please include:
 
 ```text
