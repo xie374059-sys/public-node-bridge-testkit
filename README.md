@@ -230,6 +230,15 @@ py run_node_c_codex_port_owner_probe.py
 This only correlates PIDs and ports. It does not connect to any port or claim
 IPC support.
 
+If no Codex-owned port is found, inspect read-only IPC artifact hints:
+
+```powershell
+py run_node_c_codex_ipc_artifact_probe.py
+```
+
+This lists matching named-pipe names and shallow Codex/OpenAI directory entries.
+It does not read file contents or connect to pipes.
+
 Please include:
 
 ```text
