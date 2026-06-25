@@ -103,6 +103,28 @@ Expected result:
 }
 ```
 
+## Node-C Avatar Installer Preflight
+
+`install_node_c_avatar.py` creates local testkit state:
+
+```text
+.node_c_avatar/config.json
+.node_c_avatar/state.json
+```
+
+`run_node_c_avatar.py` then returns a structured packet with:
+
+```text
+health
+heartbeat
+capabilities
+allowed_task_types
+denied_capabilities
+completed light tasks
+```
+
+The installer preflight still uses only `reply_exactly` and remains local-only.
+
 ## Forbidden In V0.1
 
 ```text

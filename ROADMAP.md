@@ -32,7 +32,26 @@ no external send
 no formal ACK
 ```
 
-## V0.3 Public Relay Preflight
+## V0.3 Node-C Avatar Installer Preflight
+
+Goal:
+
+```text
+Testers can install and run a local-only Node-C avatar without understanding the code.
+```
+
+Rules:
+
+```text
+creates only .node_c_avatar local state
+returns health, heartbeat, capabilities, and light-task results
+no background persistence yet
+no private routes
+no external send
+no formal ACK
+```
+
+## V0.4 Public Relay Preflight
 
 Goal:
 
@@ -51,7 +70,7 @@ no external send
 no formal ACK
 ```
 
-## V0.4 Real Agent Adapter Interface
+## V0.5 Real Agent Adapter Interface
 
 Goal:
 
@@ -68,7 +87,7 @@ submit_result
 heartbeat
 ```
 
-## V0.5 Download-Only File Channel Preflight
+## V0.6 Download-Only File Channel Preflight
 
 Goal:
 

@@ -73,6 +73,30 @@ Expected output includes:
 }
 ```
 
+Install and run the local-only Node-C avatar:
+
+```bash
+python3 install_node_c_avatar.py
+python3 run_node_c_avatar.py
+```
+
+On Windows:
+
+```powershell
+py install_node_c_avatar.py
+py run_node_c_avatar.py
+```
+
+Expected output from the run step includes:
+
+```json
+{
+  "ok": true,
+  "node_id": "node-c",
+  "claim": "node_c_avatar_installer_local_run_passed"
+}
+```
+
 ## Want To Help Test?
 
 If you want to help test external AI node collaboration, open a GitHub issue
@@ -88,6 +112,13 @@ The second useful test is:
 
 ```bash
 python3 run_node_c_preflight.py
+```
+
+The third useful test is:
+
+```bash
+python3 install_node_c_avatar.py
+python3 run_node_c_avatar.py
 ```
 
 Please include:
@@ -179,6 +210,29 @@ python3 -m node_bridge_testkit.node_adapter --node-id node-c
 It still supports only `reply_exactly` and still denies shell execution, file
 access, external sends, and private endpoint routing.
 
+## Node-C Avatar Installer
+
+The installer creates only local testkit state in `.node_c_avatar/`:
+
+```text
+.node_c_avatar/config.json
+.node_c_avatar/state.json
+```
+
+The run step returns:
+
+```text
+health
+heartbeat
+capabilities
+allowed_task_types
+denied_capabilities
+structured light-task results
+```
+
+It is not a persistent background service yet. It is a user-like installer
+preflight for the next stage.
+
 ## Boundaries
 
 This testkit intentionally does not:
@@ -212,9 +266,10 @@ Do not include private tokens, screenshots with private data, or credentials.
 ```text
 V0.1 local relay + mock node + L0/L1 demo
 V0.2 Node-C local adapter preflight
-V0.3 public relay token preflight
-V0.4 real agent adapter interface
-V0.5 download-only file channel preflight
+V0.3 Node-C avatar installer preflight
+V0.4 public relay token preflight
+V0.5 real agent adapter interface
+V0.6 download-only file channel preflight
 ```
 
 The public testkit stays separate from Yuanjie core.

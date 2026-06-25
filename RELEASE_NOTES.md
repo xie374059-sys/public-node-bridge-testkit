@@ -8,6 +8,14 @@
 - Added CI coverage and a GitHub issue template for Node-C preflight results.
 - Updated package version to `0.2.0.dev0`.
 
+## v0.3.0-dev
+
+- Added `install_node_c_avatar.py` and `run_node_c_avatar.py`.
+- Added local-only `.node_c_avatar/` config and state generation.
+- Added structured health, heartbeat, capabilities, boundary, and light-task
+  result output.
+- Added CI coverage for the installer preflight.
+
 ## v0.1.0-local-proof
 
 First public local proof for `public-node-bridge-testkit`.
