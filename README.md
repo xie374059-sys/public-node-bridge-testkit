@@ -145,6 +145,35 @@ py connect_node.py --relay-url RELAY_URL --token TOKEN
 `connect_node.py` installs the local Node-C avatar if needed, reports health,
 polls the relay, completes one queued safe task, and prints one JSON result.
 
+You can also connect from an agent-readable handshake card:
+
+```bash
+python3 connect_node.py --card-file yuanjie_handshake_card.txt --timeout 90
+```
+
+On Windows:
+
+```powershell
+py connect_node.py --card-file yuanjie_handshake_card.txt --timeout 90
+```
+
+Generate a plain-text handshake card:
+
+```bash
+python3 make_agent_handshake_card.py --relay-url RELAY_URL --connect-code TOKEN
+```
+
+This creates:
+
+```text
+.yuanjie_handshake/yuanjie_handshake_card.txt
+.yuanjie_handshake/run_connect_node.txt
+```
+
+The card starts with `YUANJIE_HANDSHAKE_V1`. A QR code may later carry the exact
+same text, but the protocol itself remains text-first so agents that cannot
+read images can still connect.
+
 Run the local task-package preflight:
 
 ```bash
@@ -160,6 +189,12 @@ py run_node_c_task_package_preflight.py
 This only executes allowlisted package actions on package-contained text. It
 does not run shell commands, execute local files, read private files, or send
 messages.
+
+Run the local handshake-card parser preflight:
+
+```bash
+python3 run_agent_handshake_card_preflight.py
+```
 
 Please include:
 

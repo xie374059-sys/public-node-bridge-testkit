@@ -31,13 +31,19 @@ def parse_connect_card(text: str) -> dict[str, str]:
     values: dict[str, str] = {}
     for raw_line in text.splitlines():
         line = raw_line.strip()
-        if not line or line.startswith("#") or line == "YUANJIE_CONNECT_V1":
+        if not line or line.startswith("#") or line in {"YUANJIE_CONNECT_V1", "YUANJIE_HANDSHAKE_V1"}:
             continue
         if "=" not in line:
             continue
         key, value = line.split("=", 1)
         values[key.strip()] = value.strip()
     return values
+
+
+def read_card_file(path: str) -> str:
+    if not path:
+        return ""
+    return Path(path).expanduser().read_text(encoding="utf-8")
 
 
 def read_card_from_stdin() -> str:
@@ -56,9 +62,10 @@ def main() -> int:
     parser.add_argument("--interval", type=float, default=2.0)
     parser.add_argument("--max-tasks", type=int, default=1)
     parser.add_argument("--card", default="", help="Inline YUANJIE_CONNECT_V1 card text.")
+    parser.add_argument("--card-file", default="", help="Path to a YUANJIE_CONNECT_V1 or YUANJIE_HANDSHAKE_V1 card.")
     args = parser.parse_args()
 
-    card_text = args.card or read_card_from_stdin()
+    card_text = args.card or read_card_file(args.card_file) or read_card_from_stdin()
     card = parse_connect_card(card_text)
     relay = (args.relay_url or card.get("relay") or "").rstrip("/")
     token = args.token or card.get("connect_code") or card.get("token") or ""
@@ -139,6 +146,14 @@ def main() -> int:
             "last_run_claim": updated_state["last_run_claim"],
         },
         "claim": claim,
+        "handshake": {
+            "card_schema": "YUANJIE_HANDSHAKE_V1" if "YUANJIE_HANDSHAKE_V1" in card_text else "YUANJIE_CONNECT_V1",
+            "session_id": card.get("session_id", ""),
+            "role": card.get("role", ""),
+            "capabilities": card.get("capabilities", ""),
+            "boundary": card.get("boundary", ""),
+            "expires_at": card.get("expires_at", ""),
+        },
         "cannot_claim": [
             "real_codex_ipc",
             "frontstage_auto_injection",
