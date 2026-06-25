@@ -372,6 +372,72 @@ def scrub_start_response(response: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def extract_runtime_status(frame: dict[str, Any], conversation_id: str) -> dict[str, Any] | None:
+    if frame.get("type") != "broadcast" or frame.get("method") != "thread-stream-state-changed":
+        return None
+    params = frame.get("params")
+    if not isinstance(params, dict) or params.get("conversationId") != conversation_id:
+        return None
+    change = params.get("change")
+    if not isinstance(change, dict) or change.get("type") != "snapshot":
+        return None
+    conversation_state = change.get("conversationState")
+    if not isinstance(conversation_state, dict):
+        return None
+    runtime_status = conversation_state.get("threadRuntimeStatus")
+    if not isinstance(runtime_status, dict):
+        return None
+    turns = conversation_state.get("turns")
+    if not isinstance(turns, list) or not turns:
+        return None
+    last_turn = turns[-1]
+    if not isinstance(last_turn, dict):
+        return None
+    active_flags = runtime_status.get("activeFlags") or []
+    if not isinstance(active_flags, list):
+        active_flags = []
+    duration = last_turn.get("durationMs") or 0
+    return {
+        "conversation_id": conversation_id,
+        "runtime_type": str(runtime_status.get("type") or "?"),
+        "active_flags": [str(flag) for flag in active_flags],
+        "total_turns": len(turns),
+        "last_turn_status": str(last_turn.get("status") or "?"),
+        "last_turn_duration_ms": int(duration) if isinstance(duration, (int, float)) else 0,
+        "last_turn_id": str(last_turn.get("turnId") or last_turn.get("id") or "?"),
+    }
+
+
+def is_zombie_conversation(status: dict[str, Any]) -> tuple[bool, str]:
+    runtime_type = str(status.get("runtime_type") or "")
+    last_turn_status = str(status.get("last_turn_status") or "")
+    duration = int(status.get("last_turn_duration_ms") or 0)
+    active_flags = status.get("active_flags") or []
+
+    if runtime_type != "active":
+        return False, ""
+    if last_turn_status == "interrupted":
+        return True, "threadRuntimeStatus=active with interrupted turn"
+    if last_turn_status == "inProgress" and duration == 0:
+        return True, "threadRuntimeStatus=active with inProgress turn (duration=0ms)"
+    if not active_flags and last_turn_status not in {"streaming"}:
+        return True, "threadRuntimeStatus=active with empty activeFlags"
+    return False, ""
+
+
+def runtime_status_summary(status: dict[str, Any] | None) -> dict[str, Any] | None:
+    if status is None:
+        return None
+    return {
+        "runtime_type": status.get("runtime_type"),
+        "active_flags": status.get("active_flags"),
+        "total_turns": status.get("total_turns"),
+        "last_turn_status": status.get("last_turn_status"),
+        "last_turn_duration_ms": status.get("last_turn_duration_ms"),
+        "last_turn_id": status.get("last_turn_id"),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Send one tiny Codex Desktop IPC start-turn probe.")
     parser.add_argument("--conversation-id", required=True)
@@ -385,6 +451,7 @@ def main() -> int:
     parser.add_argument("--settle-timeout", type=float, default=30.0)
     parser.add_argument("--open-timeout", type=float, default=3.0)
     parser.add_argument("--read-timeout", type=float, default=10.0)
+    parser.add_argument("--no-preflight", action="store_true", help="Skip conversation runtime status check.")
     parser.add_argument("--progress", action="store_true", help="Print scrubbed wait progress to stderr.")
     args = parser.parse_args()
 
@@ -438,6 +505,61 @@ def main() -> int:
             client_id = str(init_response["result"].get("clientId") or "")
         if not init_ok or not client_id:
             raise RuntimeError("initialize_failed")
+
+        runtime_status: dict[str, Any] | None = None
+        zombie_reason = ""
+        if args.no_preflight:
+            progress(args.progress, "[preflight] skipped (--no-preflight)")
+        else:
+            for frame in buffered_frames:
+                runtime_status = extract_runtime_status(frame, args.conversation_id)
+                if runtime_status is not None:
+                    break
+            if runtime_status is None:
+                progress(args.progress, "[preflight] waiting for conversation snapshot", end="")
+                preflight_deadline = time.monotonic() + 5.0
+                while runtime_status is None and time.monotonic() < preflight_deadline:
+                    try:
+                        frame = read_frame(k, handle, max(0.1, min(2.0, preflight_deadline - time.monotonic())))
+                    except TimeoutError:
+                        progress(args.progress, ".", end="")
+                        continue
+                    progress_frame(args.progress, frame)
+                    if maybe_answer_discovery(k, handle, frame):
+                        discovery_replies += 1
+                        continue
+                    buffered_frames.append(frame)
+                    runtime_status = extract_runtime_status(frame, args.conversation_id)
+            is_zombie = False
+            if runtime_status is not None:
+                is_zombie, zombie_reason = is_zombie_conversation(runtime_status)
+                progress(
+                    args.progress,
+                    f"\n[preflight] runtime={runtime_status['runtime_type']} "
+                    f"turns={runtime_status['total_turns']} "
+                    f"last={runtime_status['last_turn_status']}",
+                )
+            else:
+                progress(args.progress, "\n[preflight] no snapshot found, proceeding")
+            if is_zombie:
+                print(json.dumps({
+                    "ok": False,
+                    "platform": "Windows",
+                    "pipe": args.pipe,
+                    "opened": True,
+                    "conversation_id": args.conversation_id,
+                    "stage": "preflight",
+                    "error": "conversation_is_zombie",
+                    "detail": zombie_reason,
+                    "runtime_status": runtime_status_summary(runtime_status),
+                    "suggestion": (
+                        "This conversation runtime looks stuck. Use a different --conversation-id "
+                        "or restart Codex Desktop before sending another start-turn."
+                    ),
+                    "claim": "node_c_codex_ipc_start_turn_preflight_zombie_detected",
+                    "cannot_claim": cannot_claim(),
+                }, ensure_ascii=False, indent=2))
+                return 1
 
         start_id = request_id("start")
         progress(args.progress, "[start] thread-follower-start-turn", end="")
@@ -535,6 +657,7 @@ def main() -> int:
             "cwd": cwd,
             "marker": expected,
             "start_timeout_ms": int(args.start_timeout * 1000),
+            "preflight_runtime_status": runtime_status_summary(runtime_status),
             "initialize_ok": init_ok,
             "start_turn_response": start_response_scrubbed,
             "task_sent_to_codex": task_sent,

@@ -306,6 +306,11 @@ with `text_elements: []`, `attachments: []`, `commentAttachments: []`, and a
 separate `--start-timeout` for the model turn request. Use `--task-text` only
 when a maintainer asks for a custom prompt; the default exact-reply marker is
 the safest probe.
+Before sending the turn, the probe checks recent scrubbed stream snapshots for
+the target conversation runtime. If it detects an `active` conversation with an
+interrupted or never-running turn, it stops with `conversation_is_zombie` instead
+of sending another task into a stuck thread. Use another `--conversation-id` or
+restart Codex Desktop; `--no-preflight` is available only for diagnostics.
 After the exact marker is observed, it keeps the IPC connection open briefly
 (`--settle-timeout`, default 30 seconds) and reports scrubbed post-marker stream
 diagnostics to help distinguish early disconnects from frontstage turn-state
