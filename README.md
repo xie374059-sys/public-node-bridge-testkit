@@ -1,0 +1,157 @@
+# Public Node Bridge Testkit
+
+A tiny local-first testkit for verifying light-task Agent-to-Agent node flow.
+
+It is designed for people who want to test the idea without trusting a private
+server or installing a full agent runtime.
+
+## What It Proves
+
+This public testkit proves only:
+
+```text
+relay can accept a light task
+mock node can poll the task
+mock node can return a structured result
+caller can verify the exact result
+```
+
+It does not prove:
+
+```text
+real Codex Desktop IPC
+real external node connection
+formal ACK
+external message sending
+file execution
+long-running autonomy
+```
+
+## Quickstart
+
+Requirements:
+
+```text
+Python 3.10+
+No third-party packages
+```
+
+Run the full local demo:
+
+```bash
+python3 run_local_demo.py
+```
+
+Expected output includes:
+
+```json
+{
+  "ok": true,
+  "claim": "local_public_testkit_l0_l1_passed"
+}
+```
+
+## Manual Local Run
+
+Terminal 1:
+
+```bash
+python3 -m node_bridge_testkit.relay --port 8765
+```
+
+Terminal 2:
+
+```bash
+python3 -m node_bridge_testkit.mock_node --node-id node-b
+```
+
+Terminal 3:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8765/tasks \
+  -H 'Content-Type: application/json' \
+  --data-binary '{
+    "target_node": "node-b",
+    "task_type": "reply_exactly",
+    "payload": {
+      "marker": "L0-OK",
+      "text": "OK"
+    }
+  }'
+```
+
+Then read the returned `task_id`:
+
+```bash
+curl -sS http://127.0.0.1:8765/tasks/TASK_ID
+```
+
+## Safe Task Types
+
+V0.1 supports only:
+
+```text
+reply_exactly
+```
+
+Example:
+
+```json
+{
+  "target_node": "node-b",
+  "task_type": "reply_exactly",
+  "payload": {
+    "marker": "PUBLIC_L1",
+    "text": "STATUS=READ_OK; MARKER=PUBLIC_L1; NEXT=SMALL_TASK"
+  }
+}
+```
+
+The mock node returns exactly:
+
+```json
+{
+  "status": "ok",
+  "agent_message": "STATUS=READ_OK; MARKER=PUBLIC_L1; NEXT=SMALL_TASK",
+  "execution": "mock_reply_exactly"
+}
+```
+
+## Boundaries
+
+This testkit intentionally does not:
+
+```text
+run shell commands
+open local files
+send external messages
+install packages
+touch private data
+connect to Yuanjie private infrastructure
+expose Aliyun routes, tokens, or IPC internals
+```
+
+## How To Report A Result
+
+Open an issue with:
+
+```text
+OS
+Python version
+Command run
+Full output
+Whether ok=true appeared
+```
+
+Do not include private tokens, screenshots with private data, or credentials.
+
+## Roadmap
+
+```text
+V0.1 local relay + mock node + L0/L1 demo
+V0.2 public relay token preflight
+V0.3 real agent adapter interface
+V0.4 download-only file channel preflight
+```
+
+The public testkit stays separate from Yuanjie core.

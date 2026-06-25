@@ -1,0 +1,48 @@
+name: L0/L1 local demo result
+description: Report a local public testkit run.
+title: "[Result] local demo on <OS>"
+labels: ["result", "l0-l1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing the public node bridge testkit.
+        Do not paste tokens, credentials, or private screenshots.
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: "macOS 15 / Windows 11 / Ubuntu 24.04"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "python3 --version"
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command run
+      value: "python3 run_local_demo.py"
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: Paste the terminal output. Redact private paths if needed.
+      render: shell
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Did ok=true appear?
+      options:
+        - "yes"
+        - "no"
+    validations:
+      required: true

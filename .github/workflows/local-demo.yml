@@ -1,0 +1,20 @@
+name: local-demo
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  local-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile Python files
+        run: |
+          python -m py_compile node_bridge_testkit/__init__.py node_bridge_testkit/relay.py node_bridge_testkit/mock_node.py run_local_demo.py
+      - name: Run local demo
+        run: |
+          python run_local_demo.py
