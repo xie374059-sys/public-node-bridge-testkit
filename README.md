@@ -392,6 +392,37 @@ It combines local install state, heartbeat, `session_binding.json`, and
 `task_cache/` so the tester can see whether the node is ready, busy, or blocked
 by a bad conversation before another task is sent.
 
+Inspect local loop readiness:
+
+```bash
+python3 run_node_c_loop_readiness.py
+```
+
+On Windows:
+
+```powershell
+py run_node_c_loop_readiness.py
+```
+
+This is the "Loop sensor" layer. It reads only local avatar state and reports
+whether the node has a fresh heartbeat, a non-zombie session binding, an
+accessible task cache, a pending cached task, and observed `approval_gate`
+metadata. The positive local state is `local_loop_ready`. This still does not
+claim real Codex IPC, task delivery to Codex, frontstage UI injection, formal
+ACK, external send, long-running autonomy, or production readiness.
+
+Preflight the loop-readiness sensor with a temporary sandbox:
+
+```bash
+python3 run_node_c_loop_readiness_preflight.py
+```
+
+On Windows:
+
+```powershell
+py run_node_c_loop_readiness_preflight.py
+```
+
 Run the local handshake-card parser preflight:
 
 ```bash

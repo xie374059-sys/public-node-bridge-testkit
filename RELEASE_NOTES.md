@@ -13,6 +13,11 @@
   `run_approval_gate_task_package_preflight.py` and
   `send_approval_gate_task_package_probe.py`. They preserve approval metadata
   as a scrubbed result summary without expanding execution permissions.
+- Added local loop-readiness sensors:
+  `run_node_c_loop_readiness.py` and
+  `run_node_c_loop_readiness_preflight.py`. They summarize heartbeat, session
+  binding, task cache, busy/zombie state, and approval-gate presence without
+  contacting Codex or the relay.
 - Added `run_node_c_preflight.py` for a safe Node-C local adapter preflight.
 - Added `node_bridge_testkit.node_adapter`, which only handles `reply_exactly`
   and denies shell execution, file access, external sends, and private routing.
