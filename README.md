@@ -419,6 +419,20 @@ target_thread_ok -> start_turn_ok -> completion_observed -> refresh_after_ok
 
 `refresh_after_ok` is currently `null`; it is not claimed by this public probe.
 
+If the UI still shows "thinking", observe the local Codex rollout/session files
+instead of sending another prompt:
+
+```powershell
+py run_node_c_codex_session_completion_probe.py --session-binding .node_c_avatar\session_binding.json --marker NODEC_IPC_OK_001
+```
+
+This probe sends nothing. It reads only local `.codex\sessions` rollout files
+and checks for `user_message`, `agent_message`, and `task_complete` records that
+contain the marker. If `assistant_answer_seen=true` and `task_complete_seen=true`
+while the UI is still spinning, the model turn completed and the remaining
+problem is frontstage refresh/hydration. If these gates remain false, the
+start-turn did not produce a completed model turn.
+
 Please include:
 
 ```text
