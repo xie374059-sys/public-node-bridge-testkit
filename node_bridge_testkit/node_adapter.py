@@ -13,6 +13,7 @@ import base64
 import hashlib
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 import time
 from typing import Any
@@ -35,6 +36,10 @@ MAX_TASK_PACKAGE_BYTES = 64 * 1024
 ALLOWED_TASK_PACKAGE_ACTIONS = {"count_lines", "hash_text"}
 
 
+def now_utc() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
 def safe_filename(name: str) -> str:
     cleaned = name.strip().replace("\\", "/").split("/")[-1]
     if not cleaned or cleaned in {".", ".."}:
@@ -44,6 +49,45 @@ def safe_filename(name: str) -> str:
     if not safe:
         raise ValueError("filename has no safe characters")
     return safe[:120]
+
+
+def safe_cache_id(task_id: str) -> str:
+    return safe_filename(task_id)[:80]
+
+
+def write_task_cache(
+    sandbox_dir: str | Path,
+    task: dict[str, Any],
+    status: str,
+    result: dict[str, Any] | None = None,
+    posted: dict[str, Any] | None = None,
+) -> str:
+    root = Path(sandbox_dir or ".node_c_avatar").expanduser().resolve()
+    task_id = safe_cache_id(str(task.get("task_id", "task_unknown")))
+    cache_dir = root / "task_cache"
+    path = cache_dir / f"{task_id}.json"
+    existing: dict[str, Any] = {}
+    if path.exists():
+        try:
+            existing = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            existing = {}
+    record = {
+        "schema": "node_c_local_task_cache_v0.1",
+        "task_id": task.get("task_id"),
+        "target_node": task.get("target_node"),
+        "task_type": task.get("task_type"),
+        "marker": (task.get("payload") or {}).get("marker"),
+        "status": status,
+        "cached_at": existing.get("cached_at") or now_utc(),
+        "updated_at": now_utc(),
+        "task": task,
+        "result": result,
+        "posted_ok": bool(posted.get("ok")) if isinstance(posted, dict) else None,
+    }
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return str(path)
 
 
 def http_json(method: str, url: str, body: dict[str, Any] | None = None, token: str = "") -> dict[str, Any]:
@@ -177,11 +221,15 @@ def run_once(relay_url: str, node_id: str, token: str = "", sandbox_dir: str | P
     if not task:
         return {"ok": True, "handled": False, "node_id": node_id}
 
+    cache_path = write_task_cache(sandbox_dir, task, "pulled")
+    cache_path = write_task_cache(sandbox_dir, task, "in_progress")
     result = execute_task(task, node_id, sandbox_dir=sandbox_dir)
     task_id = task["task_id"]
     result_url = f"{relay_url.rstrip('/')}/tasks/{task_id}/result"
     posted = http_json("POST", result_url, {"node_id": node_id, "result": result}, token=token)
-    return {"ok": bool(posted.get("ok")), "handled": True, "task_id": task_id, "posted": posted}
+    final_status = "completed" if posted.get("ok") else "submit_failed"
+    cache_path = write_task_cache(sandbox_dir, task, final_status, result=result, posted=posted)
+    return {"ok": bool(posted.get("ok")), "handled": True, "task_id": task_id, "posted": posted, "cache_path": cache_path}
 
 
 def main() -> int:

@@ -204,6 +204,25 @@ This only executes allowlisted package actions on package-contained text. It
 does not run shell commands, execute local files, read private files, or send
 messages.
 
+Run the local task-cache preflight:
+
+```bash
+python3 run_node_c_local_cache_preflight.py
+```
+
+On Windows:
+
+```powershell
+py run_node_c_local_cache_preflight.py
+```
+
+Remote tasks pulled by `connect_node.py` are now first written to the local
+avatar sandbox under `.node_c_avatar/task_cache/`, then executed by the local
+adapter, then updated with the result and submit status. This makes the node
+flow more observable and gives later Codex IPC adapters a local cache to read
+from instead of depending on a live relay response. It still does not prove real
+Codex IPC, external send, formal ACK, or arbitrary file execution.
+
 Run the local handshake-card parser preflight:
 
 ```bash

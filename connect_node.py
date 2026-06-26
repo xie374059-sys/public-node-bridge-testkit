@@ -152,6 +152,7 @@ def main() -> int:
                 "line_count": task_result.get("line_count"),
                 "text_sha256": task_result.get("text_sha256"),
                 "execution": task_result.get("execution"),
+                "cache_path": result.get("cache_path"),
             })
         else:
             time.sleep(args.interval)
