@@ -524,6 +524,28 @@ with `conversation_busy_or_zombie` and sends no task. Open or create an idle
 Codex Desktop conversation, then rerun discovery and start-turn with that
 conversation id.
 
+After Node-B macOS IPC start-turn has passed, the tester can join the relay
+polling path to Codex IPC for safe `reply_exactly` tasks:
+
+```bash
+python3 run_node_b_relay_ipc_client.py --relay-url RELAY_URL --token TOKEN --node-id node-b --conversation-id CONVERSATION_ID --preflight-completed-marker LAST_COMPLETED_MARKER
+```
+
+This polls one relay task, writes it to the local task cache, sends only the
+expected `reply_exactly` text into Codex Desktop through IPC, observes rollout
+completion, and submits the result back to the relay. It does not support file
+execution, task-package execution, external send, formal ACK, or persistent
+service mode.
+
+Local glue preflight without contacting Codex Desktop:
+
+```bash
+python3 run_node_b_relay_ipc_client_preflight.py
+```
+
+This uses `--dry-run-ipc`, so it proves only relay polling, task cache, result
+submission, and output shape. It does not prove real Codex Desktop IPC.
+
 On Windows, after opening Codex Desktop, run the read-only desktop-visible
 preflight:
 
