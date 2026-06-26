@@ -223,6 +223,37 @@ flow more observable and gives later Codex IPC adapters a local cache to read
 from instead of depending on a live relay response. It still does not prove real
 Codex IPC, external send, formal ACK, or arbitrary file execution.
 
+Run the next cached task locally:
+
+```bash
+python3 run_next_cached_task.py
+```
+
+On Windows:
+
+```powershell
+py run_next_cached_task.py
+```
+
+This is the manual wakeup path. It reads the next pending task already stored in
+`.node_c_avatar/task_cache/`, checks the local state sensor for busy/zombie
+conditions, executes only the existing allowlisted local adapter actions, and
+updates the same cache record to `completed_local` or `failed_local`. It does
+not poll the relay, use the Codex input box, send messages, claim formal ACK, or
+execute arbitrary files.
+
+Preflight the cached-task wakeup path without a relay:
+
+```bash
+python3 run_next_cached_task_preflight.py
+```
+
+On Windows:
+
+```powershell
+py run_next_cached_task_preflight.py
+```
+
 Inspect the local connection state:
 
 ```bash
