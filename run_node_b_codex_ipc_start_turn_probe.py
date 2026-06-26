@@ -353,6 +353,16 @@ def main() -> int:
     parser.add_argument("--completion-timeout", type=float, default=180.0)
     parser.add_argument("--poll-interval", type=float, default=2.0)
     parser.add_argument("--preflight-seconds", type=float, default=5.0)
+    parser.add_argument(
+        "--preflight-completed-marker",
+        default="",
+        help=(
+            "Optional marker from a just-completed manual turn in the same conversation. "
+            "When discovery still reports active/inProgress, rollout completion for this marker "
+            "can prove the status is stale and allow the probe to continue."
+        ),
+    )
+    parser.add_argument("--preflight-completion-timeout", type=float, default=5.0)
     parser.add_argument("--no-preflight", action="store_true")
     parser.add_argument("--no-wait-completion", action="store_true")
     parser.add_argument("--progress", action="store_true")
@@ -447,11 +457,34 @@ def main() -> int:
             output["preflight_busy_or_zombie"] = busy
             output["preflight_reason"] = reason
             if busy:
-                output["error"] = "conversation_busy_or_zombie"
-                output["suggestion"] = "Open or create an idle Codex Desktop conversation, then rerun with that conversation id."
-                output["claim"] = "node_b_codex_ipc_start_turn_preflight_blocked"
-                print(json.dumps(output, ensure_ascii=False, indent=2))
-                return 1
+                completed_marker = args.preflight_completed_marker.strip()
+                if completed_marker:
+                    fallback_completion = poll_rollout_completion(
+                        conversation_id=conversation_id,
+                        rollout_path=rollout_path,
+                        start_offset=0,
+                        marker=completed_marker,
+                        timeout=args.preflight_completion_timeout,
+                        poll_interval=args.poll_interval,
+                    )
+                    output["preflight_rollout_completion"] = fallback_completion
+                    if fallback_completion.get("observed"):
+                        output["preflight_busy_or_zombie"] = False
+                        output["preflight_reason"] = (
+                            f"{reason}; rollout_completed_marker_observed={completed_marker}"
+                        )
+                        output["preflight_status_source"] = "rollout_completion_fallback"
+                    else:
+                        output["preflight_status_source"] = "runtime_status"
+                if output.get("preflight_busy_or_zombie"):
+                    output["error"] = "conversation_busy_or_zombie"
+                    output["suggestion"] = (
+                        "Open or create an idle Codex Desktop conversation, or pass "
+                        "--preflight-completed-marker with a marker that rollout already proves completed."
+                    )
+                    output["claim"] = "node_b_codex_ipc_start_turn_preflight_blocked"
+                    print(json.dumps(output, ensure_ascii=False, indent=2))
+                    return 1
 
         start_id = f"start-{uuid.uuid4()}"
         start_message = {

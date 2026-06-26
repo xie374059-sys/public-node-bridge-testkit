@@ -490,6 +490,18 @@ a maintainer may ask for one tiny macOS IPC start-turn probe:
 python3 run_node_b_codex_ipc_start_turn_probe.py --conversation-id CONVERSATION_ID
 ```
 
+If Codex Desktop visibly completed a manual idle check but discovery still
+reports `active/inProgress`, pass that completed manual marker as a rollout
+fallback:
+
+```bash
+python3 run_node_b_codex_ipc_start_turn_probe.py --conversation-id CONVERSATION_ID --preflight-completed-marker NODEB_IDLE_CHECK_002
+```
+
+This does not ignore busy state blindly. It proceeds only when the local rollout
+file already proves the marker has `user_message`, `agent_message`, exact
+assistant text, and `task_complete`.
+
 The default prompt is only `Reply exactly: NODEB_IPC_OK_001` plus a boundary
 line. The probe sends through `thread-follower-start-turn`, then observes local
 Codex rollout evidence for `user_message`, `agent_message`, exact marker, and

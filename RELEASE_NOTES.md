@@ -9,6 +9,10 @@
   `run_node_b_codex_ipc_discovery.py` and
   `run_node_b_codex_ipc_start_turn_probe.py`. They use the local Unix socket
   and rollout evidence, not the input box.
+- Added a conservative Node-B start-turn preflight fallback for stale
+  `active/inProgress` discovery state. `--preflight-completed-marker` can use
+  rollout `task_complete` evidence from a just-completed manual marker before
+  allowing the next IPC start-turn.
 - Added Host Approval Gate task-package probes:
   `run_approval_gate_task_package_preflight.py` and
   `send_approval_gate_task_package_probe.py`. They preserve approval metadata
