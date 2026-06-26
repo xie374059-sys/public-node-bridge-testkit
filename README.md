@@ -51,6 +51,35 @@ Expected output includes:
 }
 ```
 
+Create small Yuanjie task slices:
+
+```bash
+python3 yuanjie_task_slicer.py --goal "Verify Node-C file channel and Codex rollout evidence"
+```
+
+On Windows:
+
+```powershell
+py yuanjie_task_slicer.py --goal "Verify Node-C file channel and Codex rollout evidence"
+```
+
+The slicer turns one broad goal into small observable task cards with markers,
+expected outputs, acceptance gates, and `cannot_claim` boundaries. It is only a
+local planning helper. It does not send tasks, call a model, prove ACK, execute
+files, or update any global experience pool.
+
+Preflight the slicer shape:
+
+```bash
+python3 run_yuanjie_task_slicer_preflight.py
+```
+
+On Windows:
+
+```powershell
+py run_yuanjie_task_slicer_preflight.py
+```
+
 Run the Node-C local adapter preflight:
 
 ```bash
