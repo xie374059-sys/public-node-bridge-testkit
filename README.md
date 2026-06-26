@@ -223,6 +223,28 @@ flow more observable and gives later Codex IPC adapters a local cache to read
 from instead of depending on a live relay response. It still does not prove real
 Codex IPC, external send, formal ACK, or arbitrary file execution.
 
+Inspect the local connection state:
+
+```bash
+python3 run_node_c_connection_state.py
+```
+
+On Windows:
+
+```powershell
+py run_node_c_connection_state.py
+```
+
+This reads only `.node_c_avatar/` and reports a Bluetooth-like state:
+
+```text
+disconnected -> discovered -> paired -> bound -> ready -> busy/zombie
+```
+
+It combines local install state, heartbeat, `session_binding.json`, and
+`task_cache/` so the tester can see whether the node is ready, busy, or blocked
+by a bad conversation before another task is sent.
+
 Run the local handshake-card parser preflight:
 
 ```bash
