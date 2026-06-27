@@ -14,6 +14,10 @@ caller -> relay -> node
 
 ```text
 created -> queued -> in_progress -> completed
+created -> pending_approval -> approved -> sent_to_codex -> running -> result_pending_review -> completed
+created -> pending_approval -> rejected
+created -> pending_approval -> approved -> failed
+created -> pending_approval -> approved -> canceled
 ```
 
 ## Endpoints
@@ -67,6 +71,32 @@ Body:
     "agent_message": "OK",
     "execution": "mock_reply_exactly"
   }
+}
+```
+
+### Approve Or Reject Collaborative Task
+
+```http
+POST /tasks/{task_id}/approval
+Content-Type: application/json
+```
+
+Approve body:
+
+```json
+{
+  "node_id": "node-c",
+  "decision": "approve"
+}
+```
+
+Reject body:
+
+```json
+{
+  "node_id": "node-c",
+  "decision": "reject",
+  "reason": "Need clearer scope."
 }
 ```
 
@@ -133,6 +163,257 @@ Expected result:
   "safe_mode": true
 }
 ```
+
+## Collaborative Bridge Relay Lifecycle Preflight
+
+`collaborative_bridge` is the first relay-side task type for the planned
+Host-approved collaborative bridge. It proves only task creation, capability
+validation, Host approval/rejection state, and approved result submission.
+
+Payload:
+
+```json
+{
+  "target_node": "node-c",
+  "task_type": "collaborative_bridge",
+  "payload": {
+    "requester": "yuanjie-controller",
+    "target_project": "D:\\work\\repo-b",
+    "prompt": "Inspect the failing test summary and propose a minimal fix.",
+    "capabilities": [
+      "send_prompt_to_codex",
+      "read_task_result",
+      "return_artifact_summary"
+    ]
+  }
+}
+```
+
+Allowed capabilities:
+
+```text
+send_prompt_to_codex
+read_task_result
+return_artifact_summary
+read_project_manifest
+run_project_command
+```
+
+Forbidden capability requests, such as `shell_execution`, are rejected before
+approval.
+
+Allowlisted command execution uses an explicit execution request. The Controller
+supplies only `command_id`; the Host worker resolves that id from its local
+allowlist.
+
+```json
+{
+  "execution_request": {
+    "kind": "allowlisted_command",
+    "command_id": "local_demo"
+  }
+}
+```
+
+The relay rejects command execution requests that do not include the
+`run_project_command` capability. It also rejects command ids that look like
+paths or command strings.
+
+Expected lifecycle:
+
+```text
+POST /tasks -> pending_approval
+GET /poll?node_id=node-c -> task=null
+POST /tasks/{task_id}/approval decision=approve -> approved
+POST /tasks/{task_id}/result -> completed
+```
+
+Rejected lifecycle:
+
+```text
+POST /tasks -> pending_approval
+POST /tasks/{task_id}/approval decision=reject -> rejected
+```
+
+Run:
+
+```bash
+python3 run_collaborative_bridge_preflight.py
+```
+
+On Windows:
+
+```powershell
+py run_collaborative_bridge_preflight.py
+```
+
+This does not prove real Codex IPC, remote desktop control, hidden background
+control, shell execution, arbitrary file read, external send, or
+production-ready collaboration.
+
+## Collaborative Bridge Audit Log
+
+Collaborative relay lifecycle events are written as append-only JSONL records.
+By default, the relay writes:
+
+```text
+.node_c_avatar/audit/collaborative_audit.jsonl
+```
+
+Maintainers can override the path when creating an in-process relay through
+`make_server(..., audit_path=...)` or with the `NODE_BRIDGE_AUDIT_PATH`
+environment variable.
+
+Audit records use:
+
+```json
+{
+  "schema": "node_bridge_collaborative_audit_v0.1",
+  "audit_id": "audit_...",
+  "task_id": "task_...",
+  "target_node": "node-c",
+  "task_type": "collaborative_bridge",
+  "event_type": "task_created",
+  "timestamp": "2026-06-26T15:46:22+00:00",
+  "status": "pending_approval",
+  "details": {}
+}
+```
+
+Current event types:
+
+```text
+task_created
+task_approved
+task_rejected
+task_sent_to_codex
+task_running
+task_result_pending_review
+task_failed
+task_canceled
+task_completed
+```
+
+Completion audit details include execution metadata and result length summary,
+not the full agent message.
+
+Run:
+
+```bash
+python3 run_collaborative_bridge_audit_preflight.py
+```
+
+On Windows:
+
+```powershell
+py run_collaborative_bridge_audit_preflight.py
+```
+
+The audit preflight proves only local append-only event recording for the relay
+lifecycle. It does not prove durable multi-user storage, tamper resistance,
+Codex IPC, shell execution, arbitrary file read, external send, or production
+security compliance.
+
+## Collaborative Bridge UI Shell
+
+The relay serves the first bilingual UI shell on the same local port:
+
+```text
+/controller?lang=zh
+/controller?lang=en
+/host?lang=zh
+/host?lang=en
+```
+
+Run:
+
+```bash
+python3 run_collaborative_bridge_ui_preflight.py
+```
+
+On Windows:
+
+```powershell
+py run_collaborative_bridge_ui_preflight.py
+```
+
+The UI shell preflight proves only that the Controller and Host pages render
+with Chinese/English labels and role markers. It does not prove task submission
+UI, Host approval UI, Codex IPC, remote desktop control, or production-ready UI.
+
+## Collaborative Bridge UI Form Flow
+
+The first UI form flow uses standard local HTML forms and the existing relay
+state. It supports:
+
+```text
+Controller creates collaborative_bridge task
+Host approves or rejects pending task
+Host returns a manual Codex result for approved task
+Controller sees completed or rejected task
+```
+
+UI form endpoints:
+
+```http
+POST /ui/controller/tasks
+POST /ui/host/approval
+POST /ui/host/result
+```
+
+Run:
+
+```bash
+python3 run_collaborative_bridge_ui_flow_preflight.py
+```
+
+On Windows:
+
+```powershell
+py run_collaborative_bridge_ui_flow_preflight.py
+```
+
+The UI form-flow preflight proves only the local Controller -> Relay -> Host
+manual approval/result loop. It does not prove real Codex IPC, remote desktop
+control, hidden background control, durable hosted collaboration, or
+production-ready UI.
+
+## Collaborative Bridge Allowlisted Command Execution
+
+The first real execution path is a Host-side allowlist worker. It runs only
+commands selected by Host configuration. The Controller cannot submit an
+arbitrary shell command.
+
+Default local command ids:
+
+```text
+local_demo -> py run_local_demo.py
+node_c_preflight -> py run_node_c_preflight.py
+collaborative_bridge_preflight -> py run_collaborative_bridge_preflight.py
+```
+
+Run one approved command task as the Host worker:
+
+```bash
+python3 run_collaborative_bridge_command_worker.py --relay-url RELAY_URL --project-root PROJECT_ROOT
+```
+
+On Windows:
+
+```powershell
+py run_collaborative_bridge_command_worker.py --relay-url RELAY_URL --project-root PROJECT_ROOT
+```
+
+Run the local end-to-end preflight:
+
+```powershell
+py run_collaborative_bridge_command_preflight.py
+```
+
+This proves Host-approved allowlisted command execution with `exit_code`,
+`stdout`, and `stderr` returned through the relay. It does not prove arbitrary
+shell execution, hidden background control, unapproved execution, or production
+remote control.
 
 ## Node-C Avatar Installer Preflight
 

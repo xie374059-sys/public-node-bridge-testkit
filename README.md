@@ -206,6 +206,117 @@ On Windows:
 py connect_node.py --relay-url RELAY_URL --token TOKEN
 ```
 
+The collaborative bridge relay lifecycle preflight is:
+
+```bash
+python3 run_collaborative_bridge_preflight.py
+```
+
+On Windows:
+
+```powershell
+py run_collaborative_bridge_preflight.py
+```
+
+This verifies only the relay-side Host approval lifecycle for
+`collaborative_bridge`: capability validation, `pending_approval`, explicit
+approve/reject, and approved result submission. It does not prove real Codex
+IPC, remote desktop control, hidden background control, shell execution,
+arbitrary file read, external send, or production-ready collaboration.
+
+The collaborative bridge audit preflight is:
+
+```bash
+python3 run_collaborative_bridge_audit_preflight.py
+```
+
+On Windows:
+
+```powershell
+py run_collaborative_bridge_audit_preflight.py
+```
+
+This verifies local append-only JSONL audit events for collaborative task
+creation, approval, execution state changes, result review, rejection, and
+completion. Completion audit entries store result metadata and message length,
+not the full agent message. It does not prove durable multi-user storage,
+tamper resistance, Codex IPC, shell execution, arbitrary file read, external
+send, or production security compliance.
+
+The collaborative bridge UI shell preflight is:
+
+```bash
+python3 run_collaborative_bridge_ui_preflight.py
+```
+
+On Windows:
+
+```powershell
+py run_collaborative_bridge_ui_preflight.py
+```
+
+When the relay is running, the bilingual UI shell is available at:
+
+```text
+http://127.0.0.1:8765/controller?lang=zh
+http://127.0.0.1:8765/controller?lang=en
+http://127.0.0.1:8765/host?lang=zh
+http://127.0.0.1:8765/host?lang=en
+```
+
+This shell currently proves only role-specific page rendering and Chinese /
+English labels. It does not yet prove task submission UI, Host approval UI,
+Codex IPC, remote desktop control, or production-ready UI.
+
+The collaborative bridge UI form-flow preflight is:
+
+```bash
+python3 run_collaborative_bridge_ui_flow_preflight.py
+```
+
+On Windows:
+
+```powershell
+py run_collaborative_bridge_ui_flow_preflight.py
+```
+
+This verifies the first local visual collaboration loop:
+
+```text
+Controller UI form -> relay pending_approval task
+Host UI form -> approve or reject
+Host UI form -> return manual result for approved task
+Controller UI -> displays completed or rejected task
+```
+
+It does not prove Codex IPC, remote desktop control, hidden background control,
+durable hosted collaboration, or production-ready UI.
+
+The collaborative bridge allowlisted-command preflight is:
+
+```bash
+python3 run_collaborative_bridge_command_preflight.py
+```
+
+On Windows:
+
+```powershell
+py run_collaborative_bridge_command_preflight.py
+```
+
+This verifies the first real Host-side execution loop:
+
+```text
+Controller creates allowlisted command task
+Host approves the task
+Host worker runs the local allowlist command
+Controller reads exit_code/stdout/stderr
+```
+
+It does not allow Controller-provided shell commands. The Host worker resolves
+`command_id` from a local allowlist and executes inside the Host-selected
+project root.
+
 `connect_node.py` installs the local Node-C avatar if needed, reports health,
 polls the relay, completes one queued safe task, and prints one JSON result.
 It now prints progress lines to stderr by default (`[config]`, `[health]`,
@@ -785,6 +896,71 @@ V0.1 supports:
 reply_exactly
 file_deliver
 task_package
+collaborative_bridge
+```
+
+`collaborative_bridge` is pending-approval by default. It is not returned by
+normal node polling; Host review is handled through the explicit approval
+lifecycle. The relay supports the first lifecycle gate through:
+
+```http
+POST /tasks/{task_id}/approval
+```
+
+Allowed collaborative capabilities are:
+
+```text
+send_prompt_to_codex
+read_task_result
+return_artifact_summary
+read_project_manifest
+run_project_command
+```
+
+Requests for forbidden capabilities such as `shell_execution` are rejected at
+the relay boundary.
+
+Allowlisted command execution requests use:
+
+```json
+{
+  "execution_request": {
+    "kind": "allowlisted_command",
+    "command_id": "local_demo"
+  }
+}
+```
+
+The relay accepts this only when `run_project_command` is present. The Host
+worker maps `command_id` to local commands such as `py run_local_demo.py`; the
+Controller never sends raw shell strings.
+
+Collaborative relay events are written to:
+
+```text
+.node_c_avatar/audit/collaborative_audit.jsonl
+```
+
+This path can be overridden with `NODE_BRIDGE_AUDIT_PATH` or with the
+`audit_path` argument when creating an in-process relay through `make_server`.
+State transitions through `/tasks/{task_id}/state` are also audited, and result
+completion audit entries avoid storing full agent replies.
+
+The first bilingual UI shell is served from the relay process:
+
+```text
+/controller?lang=zh
+/controller?lang=en
+/host?lang=zh
+/host?lang=en
+```
+
+The first UI form endpoints are:
+
+```http
+POST /ui/controller/tasks
+POST /ui/host/approval
+POST /ui/host/result
 ```
 
 Example:
