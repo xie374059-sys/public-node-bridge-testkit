@@ -546,6 +546,22 @@ python3 run_node_b_relay_ipc_client_preflight.py
 This uses `--dry-run-ipc`, so it proves only relay polling, task cache, result
 submission, and output shape. It does not prove real Codex Desktop IPC.
 
+From the caller side, enqueue one Node-B relay-to-Codex IPC light task and wait
+for the relay result:
+
+```bash
+python3 send_node_b_relay_ipc_probe.py --relay-url RELAY_URL --token TOKEN --node-id node-b
+```
+
+Local sender plus dry-run client preflight:
+
+```bash
+python3 run_node_b_relay_ipc_sender_preflight.py
+```
+
+This proves the caller-side task enqueue and result wait path, paired with the
+dry-run client. It still does not prove real Codex Desktop IPC.
+
 On Windows, after opening Codex Desktop, run the read-only desktop-visible
 preflight:
 

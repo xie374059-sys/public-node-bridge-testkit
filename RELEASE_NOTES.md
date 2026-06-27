@@ -17,6 +17,9 @@
   `run_node_b_relay_ipc_client_preflight.py` to join relay `reply_exactly`
   tasks to Node-B Codex IPC start-turn and relay result submission. The local
   preflight uses dry-run IPC and does not prove real Codex Desktop IPC.
+- Added `send_node_b_relay_ipc_probe.py` and
+  `run_node_b_relay_ipc_sender_preflight.py` so the caller side can enqueue one
+  Node-B relay-to-Codex IPC light task and wait for the returned relay result.
 - Added Host Approval Gate task-package probes:
   `run_approval_gate_task_package_preflight.py` and
   `send_approval_gate_task_package_probe.py`. They preserve approval metadata
